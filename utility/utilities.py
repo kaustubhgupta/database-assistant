@@ -1,8 +1,22 @@
 from configparser import ConfigParser
 import psycopg2
 import logging
+import re
 
 logger = logging.getLogger(__name__)
+
+FORBIDDEN_SQL_OPERATIONS = (
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "MERGE",
+    "CREATE",
+    "ALTER",
+    "DROP",
+    "TRUNCATE",
+    "CALL",
+    "EXPLAIN",
+)
 
 
 def config(filename="database.ini", section="postgresql"):
@@ -23,9 +37,7 @@ def config(filename="database.ini", section="postgresql"):
         logger.info("All DB parameters loaded")
 
     else:
-        error_message = (
-            f"Section {section} not found in the {filename} file"
-        )
+        error_message = f"Section {section} not found in the {filename} file"
 
         logger.error(error_message)
         raise Exception(error_message)
@@ -131,8 +143,7 @@ def fetch_schema(table_name, schema="public"):
 
         if not columns:
             raise ValueError(
-                f"Table '{table_name}' was not found "
-                f"in the '{schema}' schema"
+                f"Table '{table_name}' was not found " f"in the '{schema}' schema"
             )
 
         return "\n".join(
@@ -151,16 +162,22 @@ def fetch_schema(table_name, schema="public"):
         logger.exception(error)
         raise
 
+
 def load_schema_tables():
     schema_tables = {}
-    _, rows = direct_db_access(
-        """
+    _, rows = direct_db_access("""
         SELECT table_schema, table_name
         FROM information_schema.tables
         WHERE table_type = 'BASE TABLE'
         ORDER BY table_schema, table_name
-        """
-    )
+        """)
     for schema, table in rows or []:
         schema_tables.setdefault(schema, []).append(table)
     return schema_tables
+
+
+def contains_forbidden_sql_operation(query):
+    """Return the blocked SQL operation found in a query, if any."""
+    pattern = r"\\b(" + "|".join(FORBIDDEN_SQL_OPERATIONS) + r")\\b"
+    match = re.search(pattern, query, flags=re.IGNORECASE)
+    return match.group(1).upper() if match else None

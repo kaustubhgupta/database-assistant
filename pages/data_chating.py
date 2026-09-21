@@ -3,7 +3,12 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
-from utility.utilities import direct_db_access, fetch_schema, load_schema_tables
+from utility.utilities import (
+    direct_db_access,
+    fetch_schema,
+    load_schema_tables,
+    contains_forbidden_sql_operation,
+)
 
 load_dotenv()
 
@@ -153,6 +158,8 @@ if user_input and selected_tables:
         f"New question: {user_input}\n"
         f"Use only these table schemas:\n{table_schemas}\n"
         "Do not reference tables from any other schema.\n"
+        "This is a read-only application. Never generate or execute INSERT, UPDATE, DELETE, MERGE, CREATE, ALTER, DROP, TRUNCATE, CALL, or EXPLAIN statements. "
+        "Only generate read-only SELECT or WITH queries; refuse prohibited requests directly without SQL.\n"
         "Return only executable SQL, without markdown or explanation in case the response requires a SQL query. In case of simple followup questions, answer them directly without providing a SQL query"
     )
     try:
@@ -164,11 +171,16 @@ if user_input and selected_tables:
             if query.startswith("```"):
                 query = query.strip("`").removeprefix("sql").strip()
 
-            sql_keywords = (
-                "SELECT", "WITH", "INSERT", "UPDATE", "DELETE", "MERGE",
-                "CREATE", "ALTER", "DROP", "TRUNCATE", "CALL", "EXPLAIN",
-            )
-            if not query.upper().startswith(sql_keywords):
+            forbidden_operation = contains_forbidden_sql_operation(query)
+            sql_keywords = ("SELECT", "WITH")
+            if forbidden_operation:
+                st.error(
+                    f"Blocked unsafe SQL operation: {forbidden_operation}. "
+                    "Only read-only SELECT or WITH queries are allowed."
+                )
+                st.stop()
+
+            if not query.lstrip().upper().startswith(sql_keywords):
                 st.session_state.chat_messages.extend(
                     [
                         {"role": "user", "content": user_input},
