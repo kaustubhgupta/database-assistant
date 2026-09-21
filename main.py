@@ -6,7 +6,13 @@ st.set_page_config(page_title="GenAI Bootcamp Apps", page_icon="🏠")
 
 def master_page():
     st.title("GenAI Bootcamp Apps")
-    st.write("Use the sidebar on the left to navigate to applications.")
+    st.write(
+        "This homepage provides access to the applications built during the \n"
+        "GenAI Bootcamp. Use the sidebar on the left to explore the available "
+        "apps.\n\n"
+        "1. Database Querying: An app that allows you to query a database using natural language.\n"
+        "2. Data Chat: An app that enables you to chat with your data, asking questions and receiving insights.\n"
+    )
 
 
 # Add or update entries to customize the names shown in the sidebar.
