@@ -6,6 +6,7 @@ st.set_page_config(
     page_icon="🏠",
 )
 
+
 def master_page():
     st.title("GenAI Bootcamp Apps")
     st.write(
@@ -15,6 +16,7 @@ def master_page():
         "1. Database Querying: An app that allows you to query a database using natural language.\n"
         "2. Data Chat: An app that enables you to chat with your data, asking questions and receiving insights.\n"
     )
+
 
 PAGE_NAMES = {
     "data_querying.py": "Data Querying",

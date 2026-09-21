@@ -4,7 +4,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
 from utility.utilities import (
-    contains_forbidden_sql_operation,
+    StrictSQLQuery,
     direct_db_access,
     fetch_schema,
     load_schema_tables,
@@ -110,50 +110,54 @@ if st.button("Ask") and user_input.strip() and selected_tables:
         f"Use only these table schemas:\n{table_schemas}\n"
         "Do not reference tables from any other schema.\n"
         "This is a read-only application. Never generate INSERT, UPDATE, DELETE, MERGE, CREATE, ALTER, DROP, TRUNCATE, CALL, or EXPLAIN statements. "
-        "Only generate read-only SELECT or WITH queries. Refuse prohibited requests directly without SQL.\n"
-        "Return only executable SQL, without markdown or explanation."
+        "Only generate read-only SELECT or WITH queries. Refuse prohibited requests directly without SQL. "
+        "For a WITH query, set operation_type to SELECT.\n"
+        "Return only the requested structured SQL query with no markdown or explanation."
     )
     try:
         with st.spinner("Generating query from the LLM..."):
-            response = OpenAI().responses.create(
-                model=f"{os.getenv('OPENAI_MODEL')}", input=prompt
+            response = OpenAI().responses.parse(
+                model=os.getenv("OPENAI_MODEL"),
+                input=prompt,
+                text_format=StrictSQLQuery,
             )
-            query = response.output_text.strip()
-            if query.startswith("```"):
-                query = query.strip("`").removeprefix("sql").strip()
+            validated_query = response.output_parsed
+            if validated_query is None:
+                raise ValueError("The model did not return a structured SQL query.")
 
         history_item = {
             "id": len(st.session_state.question_history),
             "timestamp": datetime.now(),
             "question": user_input,
-            "query": query,
+            "query": validated_query.query,
+            "operation_type": validated_query.operation_type,
             "schema": selected_schema,
             "tables": selected_tables,
         }
         st.session_state.question_history.append(history_item)
 
-        forbidden_operation = contains_forbidden_sql_operation(query)
-        is_read_only_query = query.lstrip().upper().startswith(("SELECT", "WITH"))
-
-        if forbidden_operation:
+        if validated_query.operation_type != "SELECT":
             st.error(
-                f"Blocked unsafe SQL operation: {forbidden_operation}. "
+                "Blocked unsafe SQL operation. "
                 "Only read-only SELECT or WITH queries are allowed."
             )
-        elif not is_read_only_query:
-            st.error("The response was not a read-only SELECT or WITH query.")
         else:
             with st.spinner("Running query against the database..."):
-                columns, rows = direct_db_access(query)
+                columns, rows = direct_db_access(validated_query.query)
 
-            history_item["result"] = (query, columns, rows)
+            history_item["result"] = (
+                validated_query.query,
+                validated_query.operation_type,
+                columns,
+                rows,
+            )
             st.session_state.last_result = history_item["result"]
             st.rerun()
     except Exception as exc:
         st.error(f"Could not generate or run the query: {exc}")
 
 if st.session_state.last_result is not None:
-    query, columns, rows = st.session_state.last_result
+    query, operation_type, columns, rows = st.session_state.last_result
     st.subheader("Generated query")
     st.code(query, language="sql")
     st.subheader("Results")
