@@ -16,18 +16,18 @@ st.title("Database Assistant")
 ALL_TOOLS = PG_TOOLS
 ALL_TOOLS_MAPPINGS = PG_TOOLS_MAPPING
 
-if "chat_messages" not in st.session_state:
-    st.session_state.chat_messages = []
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+if "database_chat_messages" not in st.session_state:
+    st.session_state.database_chat_messages = []
+if "database_chat_history" not in st.session_state:
+    st.session_state.database_chat_history = []
 
 
 def restore_chat(chat_id):
     history_item = next(
-        item for item in st.session_state.chat_history if item["id"] == chat_id
+        item for item in st.session_state.database_chat_history if item["id"] == chat_id
     )
     st.session_state.selected_chat_id = chat_id
-    st.session_state.chat_messages = [
+    st.session_state.database_chat_messages = [
         dict(message) for message in history_item["messages"]
     ]
     st.session_state.last_response_id = history_item.get("response_id")
@@ -35,25 +35,25 @@ def restore_chat(chat_id):
 
 # The radio widget updates its session-state value before the next script run.
 # Restore the chat before creating the dependent sidebar widgets.
-history_selection = st.session_state.get("history_selection")
+history_selection = st.session_state.get("database_history_selection")
 if (
     history_selection is not None
     and history_selection != st.session_state.get("selected_chat_id")
-    and any(item["id"] == history_selection for item in st.session_state.chat_history)
+    and any(item["id"] == history_selection for item in st.session_state.database_chat_history)
 ):
     restore_chat(history_selection)
 
 with st.sidebar:
 
     if st.button("New chat"):
-        st.session_state.chat_messages = []
-        st.session_state.pop("selected_chat_id", None)
-        st.session_state.pop("last_response_id", None)
-        st.session_state.pop("history_selection", None)
+        st.session_state.database_chat_messages = []
+        st.session_state.pop("database_selected_chat_id", None)
+        st.session_state.pop("database_last_response_id", None)
+        st.session_state.pop("database_history_selection", None)
         st.rerun()
 
-    if st.session_state.chat_history:
-        history_items = list(reversed(st.session_state.chat_history))
+    if st.session_state.database_chat_history:
+        history_items = list(reversed(st.session_state.database_chat_history))
 
         st.radio(
             "Previous chats",
@@ -64,13 +64,13 @@ with st.sidebar:
                 for item in history_items
                 if item["id"] == item_id
             ),
-            key="history_selection",
+            key="database_history_selection",
         )
     else:
         st.caption("No previous chats yet.")
 
 
-for message in st.session_state.chat_messages:
+for message in st.session_state.database_chat_messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message.get("rows"):
@@ -82,14 +82,14 @@ for message in st.session_state.chat_messages:
 
 def save_chat_history(question, response_id):
     """Create a history entry for a new chat or update the active chat."""
-    chat_id = st.session_state.get("selected_chat_id")
+    chat_id = st.session_state.get("database_selected_chat_id")
     history_item = next(
-        (item for item in st.session_state.chat_history if item["id"] == chat_id),
+        (item for item in st.session_state.database_chat_history if item["id"] == chat_id),
         None,
     )
 
     if history_item is None:
-        chat_id = len(st.session_state.chat_history)
+        chat_id = len(st.session_state.database_chat_history)
         history_item = {
             "id": chat_id,
             "timestamp": datetime.now(),
@@ -97,14 +97,14 @@ def save_chat_history(question, response_id):
             "messages": [],
             "response_id": response_id,
         }
-        st.session_state.chat_history.append(history_item)
-        st.session_state.selected_chat_id = chat_id
+        st.session_state.database_chat_history.append(history_item)
+        st.session_state.database_selected_chat_id = chat_id
 
     history_item["messages"] = [
-        dict(message) for message in st.session_state.chat_messages
+        dict(message) for message in st.session_state.database_chat_messages
     ]
     history_item["response_id"] = response_id
-    st.session_state.last_response_id = response_id
+    st.session_state.database_last_response_id = response_id
 
 
 user_input = st.chat_input("Ask a question or follow up...")
@@ -119,7 +119,7 @@ if user_input:
                 "input": prompt,
                 "tools": ALL_TOOLS,
             }
-            previous_response_id = st.session_state.get("last_response_id")
+            previous_response_id = st.session_state.get("database_last_response_id")
             if previous_response_id:
                 request_args["previous_response_id"] = previous_response_id
 
@@ -136,6 +136,7 @@ if user_input:
                         function_name = item.name
                         print(function_name, args)
                         call_function = ALL_TOOLS_MAPPINGS[function_name]
+                        st.info(f'Calling {function_name} with following arguments: {args}')
                         tool_result = call_function(**args)
                         call_id = item.call_id
                         tool_outputs.append(
@@ -159,7 +160,7 @@ if user_input:
 
             query = response.output_text.strip()
 
-            st.session_state.chat_messages.extend(
+            st.session_state.database_chat_messages.extend(
                 [
                     {"role": "user", "content": user_input},
                     {"role": "assistant", "content": query},
