@@ -3,12 +3,8 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
-from utility.utilities import (
-    direct_db_access,
-    fetch_schema,
-    load_schema_tables,
-    contains_forbidden_sql_operation,
-)
+from utility.pg_utilities import direct_db_access, fetch_schema, load_schema_tables
+from utility.generic_utilities import contains_forbidden_sql_operation
 
 load_dotenv()
 
