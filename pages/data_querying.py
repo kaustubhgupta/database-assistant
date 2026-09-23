@@ -3,12 +3,14 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
-from utility.pg_utilities import direct_db_access, fetch_schema, load_schema_tables
+from utility.pg_tools import direct_db_access, fetch_schema, load_schema_tables
 from utility.generic_utilities import StrictSQLQuery
 
 load_dotenv()
 
-st.set_page_config(page_title="Database Querying", page_icon="💬")
+st.set_page_config(
+    page_title="Database Querying", page_icon=":bar_chart:", layout="wide"
+)
 st.title("Database Querying")
 
 if "question_history" not in st.session_state:

@@ -49,7 +49,7 @@ def db_conn():
     return conn
 
 
-def direct_db_access(script):
+def direct_db_access(script, caller="data_app"):
     """
     Execute a SQL query against PostgreSQL.
 
@@ -85,12 +85,16 @@ def direct_db_access(script):
 
                 rows = cur.fetchall()
 
-                return columns, rows
+                return (
+                    (columns, rows)
+                    if caller != "llm"
+                    else {"columns": columns, "rows": rows}
+                )
 
             # INSERT / UPDATE / DELETE / DDL
             conn.commit()
 
-            return [], []
+            return ([], []) if caller != "llm" else {"columns": [], "rows": []}
 
     except Exception as error:
         conn.rollback()
@@ -150,6 +154,9 @@ def fetch_schema(table_name, schema="public"):
 
 
 def load_schema_tables():
+    """
+    Get the full mapping of schema and tables across full database
+    """
     schema_tables = {}
     _, rows = direct_db_access("""
         SELECT table_schema, table_name
@@ -160,3 +167,61 @@ def load_schema_tables():
     for schema, table in rows or []:
         schema_tables.setdefault(schema, []).append(table)
     return schema_tables
+
+
+PG_TOOLS = [
+    {
+        "type": "function",
+        "name": "direct_db_access",
+        "description": "Execute a SQL query against PostgreSQL",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "script": {
+                    "type": "string",
+                    "description": "SQL Script to execute in PostgreSQL DB",
+                },
+                "caller": {
+                    "type": "string",
+                    "description": "Who is calling this tool, pass value as 'llm' ",
+                },
+            },
+            "required": ["script", "caller"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "fetch_schema",
+        "description": "Return a table schema in an LLM-friendly format.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "table_name": {
+                    "type": "string",
+                    "description": "table name for which schema is required",
+                },
+                "schema": {
+                    "type": "string",
+                    "description": "Schema in which table is present",
+                },
+            },
+            "required": ["table_name", "schema"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "load_schema_tables",
+        "description": "Get the full mapping of schema and tables across full database",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+]
+
+PG_TOOLS_MAPPING = {
+    "direct_db_access": direct_db_access,
+    "fetch_schema": fetch_schema,
+    "load_schema_tables": load_schema_tables,
+}

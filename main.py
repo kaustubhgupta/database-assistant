@@ -21,12 +21,10 @@ def master_page():
 PAGE_NAMES = {
     "data_querying.py": "Data Querying",
     "data_chating.py": "Data Chat",
+    "database_assisstant.py": "Database Assistant",
 }
 
-PAGE_ORDER = [
-    "data_querying.py",
-    "data_chating.py",
-]
+PAGE_ORDER = ["data_querying.py", "data_chating.py", "database_assisstant.py"]
 
 pages_dir = Path(__file__).parent / "pages"
 
