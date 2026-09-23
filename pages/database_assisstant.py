@@ -5,6 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
 from utility.pg_tools import PG_TOOLS, PG_TOOLS_MAPPING
+from utility.calendar_tools import CALENDAR_TOOLS, CALENDAR_TOOLS_MAPPING
 
 load_dotenv()
 
@@ -13,8 +14,19 @@ st.set_page_config(
 )
 st.title("Database Assistant")
 
-ALL_TOOLS = PG_TOOLS
-ALL_TOOLS_MAPPINGS = PG_TOOLS_MAPPING
+def normalize_response_tool(tool):
+    """Convert Chat Completions-style tools to Responses API format."""
+    tool = dict(tool)
+    function = tool.pop("function", None)
+    if function:
+        tool.update(function)
+    return tool
+
+
+ALL_TOOLS = [
+    normalize_response_tool(tool) for tool in PG_TOOLS + CALENDAR_TOOLS
+]
+ALL_TOOLS_MAPPINGS = {**PG_TOOLS_MAPPING, **CALENDAR_TOOLS_MAPPING}
 
 if "database_chat_messages" not in st.session_state:
     st.session_state.database_chat_messages = []

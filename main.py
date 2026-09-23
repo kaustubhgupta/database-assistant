@@ -13,8 +13,9 @@ def master_page():
         "This homepage provides access to the applications built during the "
         "GenAI Bootcamp. Use the sidebar on the left to explore the available "
         "apps.\n\n"
-        "1. Database Querying: An app that allows you to query a database using natural language.\n"
-        "2. Data Chat: An app that enables you to chat with your data, asking questions and receiving insights.\n"
+        "1. **Database Querying** — Select a schema and tables, ask a question in plain English, generate a validated read-only SQL query, and view the results.\n"
+        "2. **Data Chat** — Select data sources and chat with your data. The application generates and executes read-only SQL when needed, while supporting follow-up questions and chat history.\n"
+        "3. **Database Assistant** — Ask database questions conversationally. The assistant can call database tools to inspect schemas and retrieve results, with support for follow-up conversations and saved chats.\n"
     )
 
 
