@@ -107,10 +107,8 @@ if st.button("Ask") and user_input.strip() and selected_tables:
         f"Question: {user_input}\n"
         f"Use only these table schemas:\n{table_schemas}\n"
         "Do not reference tables from any other schema.\n"
-        "This is a read-only application. Never generate INSERT, UPDATE, DELETE, MERGE, CREATE, ALTER, DROP, TRUNCATE, CALL, or EXPLAIN statements. "
-        "Only generate read-only SELECT or WITH queries. Refuse prohibited requests directly without SQL. "
-        "For a WITH query, set operation_type to SELECT.\n"
-        "Return only the requested structured SQL query with no markdown or explanation."
+        "For a WITH query, set operation_type to SELECT.\n"  
+        "Return only the requested structured SQL query with no markdown and no explanation."
     )
     try:
         with st.spinner("Generating query from the LLM..."):
